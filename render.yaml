@@ -3,5 +3,6 @@ services:
     name: limpabordas
     env: docker
     plan: free
-    region: oregon
-    branch: master
+
+    gunicorn app.app:app
+
