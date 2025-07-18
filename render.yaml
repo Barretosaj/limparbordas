@@ -5,4 +5,5 @@ services:
     plan: free
 
     gunicorn app.app:app
-
+    gunicorn nome_do_modulo:app
+    gunicorn wsgi:app
