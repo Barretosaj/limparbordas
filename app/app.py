@@ -18,8 +18,10 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 processing_progress = 0
 processing_active = False
 
+
 def cm_to_pixels(cm, dpi=200):
     return int((cm / 2.54) * dpi)
+
 
 def erase_image_borders_custom(img, superior_cm, inferior_cm, left_cm, right_cm, dpi=200):
     superior = cm_to_pixels(superior_cm, dpi)
@@ -34,31 +36,36 @@ def erase_image_borders_custom(img, superior_cm, inferior_cm, left_cm, right_cm,
     img[:, w-right:w] = mask[:, w-right:w]
     return img
 
+
 def process_pdf(pdf_path, output_pdf_path, superior_cm, inferior_cm, left_cm, right_cm):
     global processing_progress, processing_active
-    
+
     processing_active = True
     processing_progress = 0
-    
+
     try:
         images = convert_from_path(pdf_path, dpi=200)
         total_pages = len(images)
         cleaned_images = []
-        
+
         for i, img in enumerate(images):
             img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-            cleaned = erase_image_borders_custom(img_cv, superior_cm, inferior_cm, left_cm, right_cm)
-            cleaned_pil = Image.fromarray(cv2.cvtColor(cleaned, cv2.COLOR_BGR2RGB))
+            cleaned = erase_image_borders_custom(
+                img_cv, superior_cm, inferior_cm, left_cm, right_cm)
+            cleaned_pil = Image.fromarray(
+                cv2.cvtColor(cleaned, cv2.COLOR_BGR2RGB))
             cleaned_images.append(cleaned_pil)
-            
+
             # Atualiza o progresso
             processing_progress = int((i + 1) / total_pages * 100)
             time.sleep(0.1)  # Simula um processamento mais demorado
-            
-        cleaned_images[0].save(output_pdf_path, save_all=True, append_images=cleaned_images[1:])
+
+        cleaned_images[0].save(
+            output_pdf_path, save_all=True, append_images=cleaned_images[1:])
         return True
     finally:
         processing_active = False
+
 
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
@@ -317,10 +324,11 @@ HTML_TEMPLATE = '''
 </html>
 '''
 
+
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
     global processing_progress, processing_active
-    
+
     if request.method == 'POST':
         file = request.files['file']
         if file and file.filename.endswith('.pdf'):
@@ -338,13 +346,15 @@ def upload_file():
             # Inicia o processamento em uma thread separada
             thread = threading.Thread(
                 target=process_pdf,
-                args=(input_path, output_path, superior, inferior, esquerda, direita)
+                args=(input_path, output_path, superior,
+                      inferior, esquerda, direita)
             )
             thread.start()
 
             return render_template_string(HTML_TEMPLATE, download_link=f'/download/{output_filename}')
-    
+
     return render_template_string(HTML_TEMPLATE, download_link=None)
+
 
 @app.route('/progress')
 def get_progress():
@@ -354,14 +364,15 @@ def get_progress():
         'active': processing_active
     })
 
+
 @app.route('/download/<filename>')
 def download_file(filename):
     path = os.path.join(OUTPUT_FOLDER, filename)
-    
+
     # Verifica se o arquivo existe na pasta de downloads
     if not os.path.exists(path):
         return "Arquivo não encontrado", 404
-    
+
     # Força o download mesmo que o arquivo já esteja na pasta de downloads
     return send_file(
         path,
@@ -370,11 +381,12 @@ def download_file(filename):
         mimetype='application/pdf'
     )
 
+
 if __name__ == '__main__':
     # Cria um atalho simbólico na pasta do projeto para a pasta de downloads
     try:
         os.symlink(OUTPUT_FOLDER, 'outputs')
     except FileExistsError:
         pass
-    
+
     app.run(debug=True)
