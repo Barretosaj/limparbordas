@@ -300,13 +300,15 @@ HTML_TEMPLATE = '''
                         
                         progressText.textContent = `${progressData.progress}%`;
                         
-                        if (progressData.active) {
-                            setTimeout(checkProgress, 500);
-                        } else {
-                            if (progressData.progress === 100) {
-                                window.location.reload();
-                            }
-                        }
+                       if (progressData.active) {
+    setTimeout(checkProgress, 500);
+} else {
+    if (progressData.progress === 100) {
+        // Vai diretamente para o link de download
+        window.location.href = '/download/limpo_' + formData.get('file').name;
+    }
+}
+
                     };
                     
                     setTimeout(checkProgress, 500);
