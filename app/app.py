@@ -11,8 +11,11 @@ from pathlib import Path
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
-OUTPUT_FOLDER = str(Path.home() / 'Downloads')  # Pasta de Downloads do usuário
+OUTPUT_FOLDER = 'outputs'  # Corrigido para funcionar no Render
+
+# Garante que as pastas existam
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 # Variável global para armazenar o progresso
 processing_progress = 0
@@ -56,9 +59,8 @@ def process_pdf(pdf_path, output_pdf_path, superior_cm, inferior_cm, left_cm, ri
                 cv2.cvtColor(cleaned, cv2.COLOR_BGR2RGB))
             cleaned_images.append(cleaned_pil)
 
-            # Atualiza o progresso
             processing_progress = int((i + 1) / total_pages * 100)
-            time.sleep(0.1)  # Simula um processamento mais demorado
+            time.sleep(0.1)
 
         cleaned_images[0].save(
             output_pdf_path, save_all=True, append_images=cleaned_images[1:])
@@ -281,20 +283,17 @@ HTML_TEMPLATE = '''
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 
-                // Mostra o loader
                 loaderContainer.classList.remove('hidden');
                 downloadSection.innerHTML = '';
                 
                 const formData = new FormData(form);
                 
                 try {
-                    // Envia o formulário
                     const response = await fetch('/', {
                         method: 'POST',
                         body: formData
                     });
                     
-                    // Verifica o progresso periodicamente
                     const checkProgress = async () => {
                         const progressResponse = await fetch('/progress');
                         const progressData = await progressResponse.json();
@@ -305,13 +304,11 @@ HTML_TEMPLATE = '''
                             setTimeout(checkProgress, 500);
                         } else {
                             if (progressData.progress === 100) {
-                                // Recarrega a página para mostrar o link de download
                                 window.location.reload();
                             }
                         }
                     };
                     
-                    // Inicia a verificação do progresso
                     setTimeout(checkProgress, 500);
                     
                 } catch (error) {
@@ -343,7 +340,6 @@ def upload_file():
             esquerda = float(request.form.get('esquerda', 2))
             direita = float(request.form.get('direita', 2))
 
-            # Inicia o processamento em uma thread separada
             thread = threading.Thread(
                 target=process_pdf,
                 args=(input_path, output_path, superior,
@@ -369,11 +365,9 @@ def get_progress():
 def download_file(filename):
     path = os.path.join(OUTPUT_FOLDER, filename)
 
-    # Verifica se o arquivo existe na pasta de downloads
     if not os.path.exists(path):
         return "Arquivo não encontrado", 404
 
-    # Força o download mesmo que o arquivo já esteja na pasta de downloads
     return send_file(
         path,
         as_attachment=True,
@@ -383,10 +377,4 @@ def download_file(filename):
 
 
 if __name__ == '__main__':
-    # Cria um atalho simbólico na pasta do projeto para a pasta de downloads
-    try:
-        os.symlink(OUTPUT_FOLDER, 'outputs')
-    except FileExistsError:
-        pass
-
     app.run(debug=True)
